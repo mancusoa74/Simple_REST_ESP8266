@@ -90,7 +90,7 @@ void post_put_leds() {
         if (http_rest_server.method() == HTTP_POST) {
             if ((jsonBody["id"] != 0) && (jsonBody["id"] != led_resource.id)) {
                 json_to_resource(jsonBody);
-                http_rest_server.sendHeader("Location", "/led/" + led_resource.id);
+                http_rest_server.sendHeader("Location", "/leds/" + String(led_resource.id));
                 http_rest_server.send(201);
                 pinMode(led_resource.gpio, OUTPUT);
             }
@@ -102,7 +102,7 @@ void post_put_leds() {
         else if (http_rest_server.method() == HTTP_PUT) {
             if (jsonBody["id"] == led_resource.id) {
                 json_to_resource(jsonBody);
-                http_rest_server.sendHeader("Location", "/led/" + led_resource.id);
+                http_rest_server.sendHeader("Location", "/leds/" + String(led_resource.id));
                 http_rest_server.send(200);
                 digitalWrite(led_resource.gpio, led_resource.status);
             }
