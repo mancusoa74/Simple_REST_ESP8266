@@ -41,27 +41,26 @@ int init_wifi() {
 }
 
 void get_leds() {
-    StaticJsonBuffer<200> jsonBuffer;
-    JsonObject& jsonObj = jsonBuffer.createObject();
+    StaticJsonDocument<200> jsonDocument;
     char JSONmessageBuffer[200];
 
     if (led_resource.id == 0)
         http_rest_server.send(204);
     else {
-        jsonObj["id"] = led_resource.id;
-        jsonObj["gpio"] = led_resource.gpio;
-        jsonObj["status"] = led_resource.status;
-        jsonObj.prettyPrintTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+        jsonDocument["id"] = led_resource.id;
+        jsonDocument["gpio"] = led_resource.gpio;
+        jsonDocument["status"] = led_resource.status;
+        serializeJsonPretty(jsonDocument, JSONmessageBuffer, sizeof(JSONmessageBuffer));
         http_rest_server.send(200, "application/json", JSONmessageBuffer);
     }
 }
 
-void json_to_resource(JsonObject& jsonBody) {
+void json_to_resource(JsonDocument& jsonDocument) {
     int id, gpio, status;
 
-    id = jsonBody["id"];
-    gpio = jsonBody["gpio"];
-    status = jsonBody["status"];
+    id = jsonDocument["id"];
+    gpio = jsonDocument["gpio"];
+    status = jsonDocument["status"];
 
     Serial.println(id);
     Serial.println(gpio);
@@ -73,35 +72,34 @@ void json_to_resource(JsonObject& jsonBody) {
 }
 
 void post_put_leds() {
-    StaticJsonBuffer<500> jsonBuffer;
+    StaticJsonDocument<500> jsonDocument;
     String post_body = http_rest_server.arg("plain");
     Serial.println(post_body);
-
-    JsonObject& jsonBody = jsonBuffer.parseObject(http_rest_server.arg("plain"));
-
     Serial.print("HTTP Method: ");
     Serial.println(http_rest_server.method());
+
+    DeserializationError error = deserializeJson(jsonDocument, http_rest_server.arg("plain"));
     
-    if (!jsonBody.success()) {
+    if (error) {
         Serial.println("error in parsin json body");
         http_rest_server.send(400);
     }
     else {   
         if (http_rest_server.method() == HTTP_POST) {
-            if ((jsonBody["id"] != 0) && (jsonBody["id"] != led_resource.id)) {
-                json_to_resource(jsonBody);
+            if ((jsonDocument["id"] != 0) && (jsonDocument["id"] != led_resource.id)) {
+                json_to_resource(jsonDocument);
                 http_rest_server.sendHeader("Location", "/leds/" + String(led_resource.id));
                 http_rest_server.send(201);
                 pinMode(led_resource.gpio, OUTPUT);
             }
-            else if (jsonBody["id"] == 0)
+            else if (jsonDocument["id"] == 0)
               http_rest_server.send(404);
-            else if (jsonBody["id"] == led_resource.id)
+            else if (jsonDocument["id"] == led_resource.id)
               http_rest_server.send(409);
         }
         else if (http_rest_server.method() == HTTP_PUT) {
-            if (jsonBody["id"] == led_resource.id) {
-                json_to_resource(jsonBody);
+            if (jsonDocument["id"] == led_resource.id) {
+                json_to_resource(jsonDocument);
                 http_rest_server.sendHeader("Location", "/leds/" + String(led_resource.id));
                 http_rest_server.send(200);
                 digitalWrite(led_resource.gpio, led_resource.status);
